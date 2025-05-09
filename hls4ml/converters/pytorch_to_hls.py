@@ -84,7 +84,7 @@ def pytorch_handler(*args):
     return decorator
 
 
-# map names of operations between torch.nn and torch.nn.functionals
+# map names of operations between toch.nn and torch.nn.functionals
 layer_name_map = {
     'relu': 'ReLU',
     'tanh': 'Tanh',
@@ -119,8 +119,7 @@ def parse_pytorch_model(config, verbose=True):
         ModelGraph: hls4ml model object.
     """
     import torch
-
-    from hls4ml.utils.torch import CustomFXTracer
+    from torch.fx import symbolic_trace
 
     # This is a list of dictionaries to hold all the layer info we need to generate HLS
     layer_list = []
@@ -137,12 +136,11 @@ def parse_pytorch_model(config, verbose=True):
 
     model = reader.torch_model
 
-    # dict of layer objects in non-traced form for access later on
+    # dict of layer objects in non-traced form for access lateron
     children = {c[0]: c[1] for c in model.named_children()}
     # use symbolic_trace to get a full graph of the model
 
-    tracer = CustomFXTracer()
-    traced_model = tracer.trace(model)
+    traced_model = symbolic_trace(model)
     # Define layers to skip for conversion to HLS
     skip_layers = ['Dropout', 'Sequential']
 
@@ -169,19 +167,21 @@ def parse_pytorch_model(config, verbose=True):
     # check for constant nodes
     merge_layers = ['add', 'mul', 'sub', 'fmin', 'fmax']
     i = 0  # count number of consts and use it in the name
-    for node in traced_model.nodes:
+    for node in traced_model.graph.nodes:
         if node.name.split('_')[0] in merge_layers:
             for arg in node.args:
                 if np.isscalar(arg):
                     # add an input node with the constant value
-                    new_node = traced_model.placeholder(name='const_' + str(i), type_expr=torch.Tensor, default_value=arg)
+                    new_node = traced_model.graph.placeholder(
+                        name='const_' + str(i), type_expr=torch.Tensor, default_value=arg
+                    )
                     node.prepend(new_node)
                     node.update_arg(1, new_node)
                     i += 1
 
-    traced_model.lint()
+    traced_model.graph.lint()
 
-    for node in traced_model.nodes:
+    for node in traced_model.graph.nodes:
         if node.op == 'call_module':
             # modules that are part of a torch.nn.Sequential with name 'name' have target names 'name.x',
             # where x is an integer numbering the elements of the Sequential
@@ -238,7 +238,7 @@ def parse_pytorch_model(config, verbose=True):
 
             # if a 'getitem' is the input to a node, step back in the graph to find the real source of the input
             elif "getitem" in node.args[0].name:
-                for tmp_node in traced_model.nodes:
+                for tmp_node in traced_model.graph.nodes:
                     if tmp_node.name == node.args[0].name:
                         if "getitem" in tmp_node.args[0].name:
                             raise Exception('Nested getitem calles not resolved at the moment.')
@@ -426,5 +426,5 @@ def parse_pytorch_model(config, verbose=True):
 def pytorch_to_hls(config):
     layer_list, input_layers, output_layers = parse_pytorch_model(config)
     print('Creating HLS model')
-    hls_model = ModelGraph.from_layer_list(config, layer_list, inputs=input_layers, outputs=output_layers)
+    hls_model = ModelGraph(config, layer_list, inputs=input_layers, outputs=output_layers)
     return hls_model

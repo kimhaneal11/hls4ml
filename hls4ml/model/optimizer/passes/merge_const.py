@@ -57,10 +57,10 @@ class MergeTwoConstants(OptimizerPass):
             const_node0.get_output_variable().type.precision = quantizer.hls_type
         const_node0.set_attr('value', new_val)
 
-        model.remove_node(const_node1)
+        model.remove_node(const_node1, rewire=False)
 
         # remove the batch norm node
-        model.remove_node(node)
+        model.remove_node(node, rewire=True)
 
         return True
 
@@ -168,7 +168,7 @@ class MergeToApplyAlpha(OptimizerPass):
             ApplyAlpha, new_name, attributes, [node.inputs[input_node_idx]], [x for x in node.outputs]
         )
 
-        model.remove_node(const_node)
+        model.remove_node(const_node, rewire=False)
         del node.inputs[const_node_idx]
         model.replace_node(node, aa_layer)
 
@@ -238,7 +238,7 @@ class MergeToApplyAlphaDiv(OptimizerPass):
 
         bn_layer = model.make_node(ApplyAlpha, new_name, attributes, [node.inputs[0]], [x for x in node.outputs])
 
-        model.remove_node(const_node)
+        model.remove_node(const_node, rewire=False)
         del node.inputs[1]
         model.replace_node(node, bn_layer)
 

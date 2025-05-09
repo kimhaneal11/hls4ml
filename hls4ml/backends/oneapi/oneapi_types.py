@@ -143,11 +143,8 @@ class AggregratedArrayVariableConverter:
         # pipe_name and pipe_id are only used for io_stream and interface variables in io_parallel
         tensor_var.pipe_name = f'{convert_to_pascal_case(tensor_var.name)}Pipe'
         tensor_var.pipe_id = f'{convert_to_pascal_case(tensor_var.name)}PipeID'
-        tensor_cls_fqn = tensor_var.__class__.__module__ + '.' + tensor_var.__class__.__qualname__
 
-        tensor_var.__class__ = type(
-            self.prefix + 'AggregateArrayVariable', (type(tensor_var), self.definition_cls), {'_wrapped': tensor_cls_fqn}
-        )
+        tensor_var.__class__ = type(self.prefix + 'AggregateArrayVariable', (type(tensor_var), self.definition_cls), {})
         return tensor_var
 
 
@@ -258,12 +255,9 @@ class OneAPIStaticWeightVariableConverter:
         weight_var.type = self.type_converter.convert(
             PackedType(weight_var.name + '_t', weight_var.type.precision, weight_var.data_length, 1)
         )
-        weight_cls_fqn = weight_var.__class__.__module__ + '.' + weight_var.__class__.__qualname__
 
         weight_var.__class__ = type(
-            'OneAPIStaticWeightVariable',
-            (type(weight_var), OneAPIStaticWeightVariableDefinition),
-            {'_wrapped': weight_cls_fqn},
+            'OneAPIStaticWeightVariable', (type(weight_var), OneAPIStaticWeightVariableDefinition), {}
         )
         return weight_var
 

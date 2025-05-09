@@ -36,9 +36,11 @@ class ExpandLayerGroup(OptimizerPass):
             if isinstance(new_node, Input):
                 inserted_input_nodes.append(new_node)
 
-        model.remove_node(node)
+        rewire = not node.outputs[0] in model.outputs
+
+        model.remove_node(node, rewire)
 
         for input_node in inserted_input_nodes:
-            model.remove_node(input_node)
+            model.remove_node(input_node, rewire=True)
 
         return True

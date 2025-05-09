@@ -157,6 +157,6 @@ class VivadoAcceleratorConfig:
         if tcl_script is None:
             raise Exception('No tcl script definition available for the desired interface in supported_board.json')
         if self.board.startswith('alveo'):
-            return '../templates/vivado_accelerator/' + 'alveo/' + '/tcl_scripts/' + tcl_script
+            return '../templates/vivado_accelerator/' + 'alveo' + '/tcl_scripts/' + tcl_script
         else:
             return '../templates/vivado_accelerator/' + self.board + '/tcl_scripts/' + tcl_script
